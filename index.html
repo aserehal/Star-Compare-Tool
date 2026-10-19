@@ -3,6 +3,8 @@
 <meta property="og:title" content="Stars Compare Tool: 2027 Medicare Star Ratings">
 <meta property="og:description" content="Compare any MA contract with local competitors and national benchmarks, measure by measure, with member-weighted state and county maps. By Amin Serehali, Healthcare Analytics.">
 <meta property="og:type" content="website">
+<script>window.goatcounter={no_onload:true};</script>
+<script data-goatcounter="https://aserehal.goatcounter.com/count" async src="https://gc.zgo.at/count.js"></script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Source+Sans+3:wght@400;600;700&family=Source+Serif+4:opsz,wght@8..60,600;8..60,700&display=swap">
@@ -174,7 +176,7 @@ tr.me td{background:var(--teal-soft);font-weight:700}
   <section class="mapsec" id="maps"></section>
 
   <div class="foot">
-    <b>Maps:</b> County and state shapes from US Census cartographic boundaries (us-atlas); Puerto Rico is not drawn. Member counts by county come from CMS monthly MA enrollment by state/county/contract (cells of 10 or fewer suppressed). Heat map averages assign each contract's single published rate to every area where its members live, weighted by those members or unweighted.<br><b>Sources:</b> CMS 2026 and 2027 Star Ratings data tables (measure data, measure stars, summary ratings), 2027 contract enrollment, CMS monthly MA enrollment by state/county/contract, and the October 2026 contract service area by county file (used for local peers). Local CCP contracts only.
+    <b>Maps:</b> County and state shapes from US Census cartographic boundaries (us-atlas); Puerto Rico is not drawn. Member counts by county come from CMS monthly MA enrollment by state/county/contract (cells of 10 or fewer suppressed). Heat map averages assign each contract's single published rate to every area where its members live, weighted by those members or unweighted.<br><b>Privacy:</b> anonymous usage counts (pages, contracts and measures viewed) via GoatCounter; no cookies and no personal data.<br><b>Sources:</b> CMS 2026 and 2027 Star Ratings data tables (measure data, measure stars, summary ratings), 2027 contract enrollment, CMS monthly MA enrollment by state/county/contract, and the October 2026 contract service area by county file (used for local peers). Local CCP contracts only.
   </div>
 </div>
 
@@ -187,6 +189,9 @@ const C=DATA.contracts, MS=DATA.measures, DOM=DATA.domains, CTY=DATA.counties;
 const byId=Object.fromEntries(C.map(c=>[c.id,c]));
 const byFips={}; C.forEach(c=>c.fips.forEach(f=>(byFips[f]=byFips[f]||[]).push(c.id)));
 const $=s=>document.querySelector(s);
+// usage counts (GoatCounter, no cookies); silently does nothing if blocked or offline
+const track=(path,title)=>{try{const go=()=>window.goatcounter&&window.goatcounter.count&&window.goatcounter.count({path,title:title||path,event:true});if(window.goatcounter&&window.goatcounter.count)go();else setTimeout(go,1500)}catch(e){}};
+const trackView=()=>{try{const f=()=>window.goatcounter&&window.goatcounter.count&&window.goatcounter.count({path:'/'});if(window.goatcounter&&window.goatcounter.count)f();else window.addEventListener('load',()=>setTimeout(f,300))}catch(e){}};
 const esc=s=>String(s??'').replace(/[&<>"']/g,ch=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]));
 const fmtN=n=>n==null?'—':n.toLocaleString('en-US');
 const ord=n=>{const s=['th','st','nd','rd'],v=n%100;return n+(s[(v-20)%10]||s[v]||s[0])};
@@ -201,7 +206,7 @@ if(!cur)cur=byId['H3344']?'H3344':C[0].id;
 
 // domain select
 const dsel=$('#dom'); Object.entries(DOM).forEach(([k,v])=>{const o=document.createElement('option');o.value=k;o.textContent=v;dsel.appendChild(o)});
-dsel.addEventListener('change',()=>{domKey=dsel.value;openKey=null;render()});
+dsel.addEventListener('change',()=>{domKey=dsel.value;track('domain/'+domKey,'Domain: '+domKey);openKey=null;render()});
 
 // combobox
 const cq=$('#cq'), cl=$('#clist'); let act=0, hits=[];
@@ -211,7 +216,7 @@ function showList(){const q=cq.value.trim().toLowerCase();
   cl.innerHTML=hits.map((c,i)=>`<div role="option" data-id="${c.id}" class="${i===0?'act':''}"><b>${c.id}</b><span>${esc(c.name)}</span><small>${c.ov27!=null?c.ov27+'★':'—'}</small></div>`).join('')||'<div class="mut">No contracts match</div>';
   cl.hidden=false;cq.setAttribute('aria-expanded','true')}
 function hideList(){cl.hidden=true;cq.setAttribute('aria-expanded','false')}
-function pick(id){cur=id;peerSel=null;peerMin=peerMax=null;openKey=null;showOut=false;hideList();setInput();try{history.replaceState(null,'','#'+id)}catch(e){}render()}
+function pick(id){if(id!==cur)track('contract/'+id,'Contract '+id+' – '+((byId[id]||{}).name||''));cur=id;peerSel=null;peerMin=peerMax=null;openKey=null;showOut=false;hideList();setInput();try{history.replaceState(null,'','#'+id)}catch(e){}render()}
 cq.addEventListener('focus',()=>{cq.select();showList()});
 cq.addEventListener('input',showList);
 cq.addEventListener('keydown',e=>{if(cl.hidden)return;const items=[...cl.querySelectorAll('[data-id]')];
@@ -290,8 +295,8 @@ function render(){
   h+=`<p class="note" style="margin:14px 0 0">Peers are the ${peers.length} contracts that sell in at least one of the same counties as ${esc(c.id)}.</p>`;
   $('#main').innerHTML=h;
   // events
-  document.querySelectorAll('tr.mrow').forEach(tr=>{const go=()=>{openKey=openKey===tr.dataset.k?null:tr.dataset.k;render()};tr.addEventListener('click',go);tr.addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();go()}})});
-  document.querySelectorAll('.tabs button').forEach(b=>b.addEventListener('click',e=>{e.stopPropagation();openTab=b.dataset.tab;render()}));
+  document.querySelectorAll('tr.mrow').forEach(tr=>{const go=()=>{openKey=openKey===tr.dataset.k?null:tr.dataset.k;if(openKey)track('measure/'+openKey,'Measure opened: '+openKey);render()};tr.addEventListener('click',go);tr.addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();go()}})});
+  document.querySelectorAll('.tabs button[data-tab]').forEach(b=>b.addEventListener('click',e=>{e.stopPropagation();openTab=b.dataset.tab;track('tab/'+openTab,'Tab: '+openTab);render()}));
   document.querySelectorAll('[data-mapm]').forEach(b=>b.addEventListener('click',e=>{e.stopPropagation();showMeasureOnMap(b.dataset.mapm)}));
   document.querySelectorAll('[data-go]').forEach(a=>a.addEventListener('click',e=>{e.preventDefault();pick(a.dataset.go)}));
   if(openKey){const m=MS.find(x=>x.key===openKey);openTab==='peer'?peerChart(m,group):natChart(m,group)}
@@ -408,7 +413,7 @@ function renderMaps(force){
   const s2=[cur,heatKey,heatW,heatFocus].join('|');
   if(force||s2!==heatSig){heatSig=s2;drawHeat($('#heatbody'))}
 }
-function showMeasureOnMap(k){heatKey=k;renderMaps();const h=document.getElementById('heat');if(h)h.scrollIntoView({behavior:'smooth',block:'start'})}
+function showMeasureOnMap(k){heatKey=k;track('maplink/'+k,'Map link: '+k);renderMaps();const h=document.getElementById('heat');if(h)h.scrollIntoView({behavior:'smooth',block:'start'})}
 function vbox(ids){let x0=1e9,y0=1e9,x1=-1e9,y1=-1e9;ids.forEach(a=>{const g=GEO.counties[a];if(!g)return;const b=g[1];x0=Math.min(x0,b[0]);y0=Math.min(y0,b[1]);x1=Math.max(x1,b[2]);y1=Math.max(y1,b[3])});
   if(x0>x1)return '0 0 975 610';let w=x1-x0,h=y1-y0;const minW=120;if(w<minW){x0-=(minW-w)/2;w=minW}if(h<minW*0.62){y0-=(minW*.62-h)/2;h=minW*.62}
   const p=Math.max(w,h)*0.08;return `${(x0-p).toFixed(0)} ${(y0-p).toFixed(0)} ${(w+2*p).toFixed(0)} ${(h+2*p).toFixed(0)}`}
@@ -488,21 +493,21 @@ function drawHeat(body){
     </div>
     <div class="infogrid">${card1}${card2}${card3}</div>
     <p class="note wide" style="margin-top:10px">${heatW?'<b>Weighted by members:</b> each contract counts in proportion to its members living in the area (CMS monthly enrollment by county; cells of 10 or fewer members are suppressed by CMS and left out).':'<b>Unweighted:</b> each contract with members living in the area counts once, whatever its size there.'} Scores are the contract-level rates CMS publishes, so colors show the quality of the plans people in each area are enrolled in, not local performance. Each map splits its areas into six equal-count color groups. Puerto Rico is not drawn.</p>`;
-  const hm=body.querySelector('#hm');hm.value=heatKey;hm.addEventListener('change',e=>{heatKey=e.target.value;renderMaps()});
-  const hfs=body.querySelector('#hfs');hfs.value=focus||'';hfs.addEventListener('change',e=>{heatFocus=e.target.value||null;renderMaps()});
+  const hm=body.querySelector('#hm');hm.value=heatKey;hm.addEventListener('change',e=>{heatKey=e.target.value;track('map/'+heatKey,'Map measure: '+heatKey);renderMaps()});
+  const hfs=body.querySelector('#hfs');hfs.value=focus||'';hfs.addEventListener('change',e=>{heatFocus=e.target.value||null;if(heatFocus)track('state/'+heatFocus,'State zoom: '+heatFocus);renderMaps()});
   const ha=body.querySelector('#hall');if(ha)ha.addEventListener('click',()=>{heatFocus=null;renderMaps()});
-  body.querySelectorAll('[data-w]').forEach(b=>b.addEventListener('click',()=>{heatW=b.dataset.w==='1';renderMaps()}));
+  body.querySelectorAll('[data-w]').forEach(b=>b.addEventListener('click',()=>{heatW=b.dataset.w==='1';track('weight/'+(heatW?'members':'unweighted'),'Map weighting');renderMaps()}));
   const boxes=body.querySelectorAll('.mapbox');const svgs=body.querySelectorAll('svg.map');
   const tipS=st=>{const a=AS[st];const nm=ST_NAME[st]||st;if(!st)return null;if(!a)return `<div class="t1">${esc(nm)}</div>No rated contracts`;
     return `<div class="t1">${esc(nm)}</div>Member-weighted avg <b>${fmt(a.w)}</b><br>Unweighted avg <b>${fmt(a.u)}</b><br>${a.n} rated contract${a.n===1?'':'s'} · ${Math.round(a.wt).toLocaleString()} members${a.ids.includes(cur)?`<br>${esc(cur)}: ${fmt(myV)} · ${(myMs[st]||0).toLocaleString()} members here`:''}<br><span class="mut">Click to zoom its counties</span>`};
   const tipC=k=>{const a=AC[k];if(!a)return `<div class="t1">${esc(cname(k))}</div>No rated contracts`;
     return `<div class="t1">${esc(cname(k))}</div>Member-weighted avg <b>${fmt(a.w)}</b><br>Unweighted avg <b>${fmt(a.u)}</b><br>${a.n} rated contract${a.n===1?'':'s'} · ${Math.round(a.wt).toLocaleString()} members${a.ids.includes(cur)?`<br>${esc(cur)}: ${fmt(myV)} · ${(myMc[k]||0).toLocaleString()} members here`:''}`};
   mapHover(boxes[0],svgs[0],tipS);mapHover(boxes[1],svgs[1],tipC);
-  svgs[0].addEventListener('click',e=>{const p=e.target.closest('[data-a]');if(p&&p.dataset.a&&ST_NAME[p.dataset.a]){heatFocus=p.dataset.a;renderMaps()}});
+  svgs[0].addEventListener('click',e=>{const p=e.target.closest('[data-a]');if(p&&p.dataset.a&&ST_NAME[p.dataset.a]){heatFocus=p.dataset.a;track('state/'+heatFocus,'State zoom: '+heatFocus);renderMaps()}});
 }
 
 window.addEventListener('hashchange',()=>{const h=decodeURIComponent(location.hash.slice(1));if(byId[h]&&h!==cur)pick(h)});
 let rt;window.addEventListener('resize',()=>{clearTimeout(rt);rt=setTimeout(()=>{if(openKey)render()},150)});
-render();
+render();trackView();if(location.hash.length>1)track('link/'+cur,'Opened via shared link: '+cur);
 })();
 </script>
